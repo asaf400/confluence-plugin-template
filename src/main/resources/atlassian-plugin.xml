@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<atlassian-plugin key="${atlassian.plugin.key}" name="${project.name}" plugins-version="2"> 
+  <plugin-info> 
+    <description>${project.description}</description>  
+    <version>${project.version}</version>  
+    <vendor name="${project.organization.name}" url="${project.organization.url}"/>  
+    <param name="plugin-icon">images/pluginIcon.png</param>  
+    <param name="plugin-logo">images/pluginLogo.png</param> 
+  </plugin-info>  
+  <!-- add our i18n resource -->  
+  <resource type="i18n" name="i18n" location="upgradedartifact"/>  
+  <!-- add our web resources -->  
+  <web-resource key="upgradedartifact-resources" name="upgradedartifact Web Resources"> 
+    <dependency>com.atlassian.auiplugin:ajs</dependency>  
+    <resource type="download" name="upgradedartifact.css" location="/css/upgradedartifact.css"/>  
+    <resource type="download" name="upgradedartifact.js" location="/js/upgradedartifact.js"/>  
+    <resource type="download" name="images/" location="/images"/>  
+    <context>upgradedartifact</context> 
+  </web-resource>  
+  <servlet-filter name="My Servlet Filter" i18n-name-key="my-servlet-filter.name" key="my-servlet-filter" class="upgraded.servlet.filter.MyServletFilter" location="before-decoration" weight="100">
+    <description key="my-servlet-filter.description">The My Servlet Filter Plugin</description>  
+    <url-pattern>/display/*</url-pattern>  
+    <url-pattern>/pages/*</url-pattern>  
+    <url-pattern>/foobar</url-pattern>  
+    <dispatcher>REQUEST</dispatcher>  
+    <dispatcher>FORWARD</dispatcher>  
+    <dispatcher>INCLUDE</dispatcher>  
+    <dispatcher>ERROR</dispatcher> 
+  </servlet-filter>  
+  <servlet-context-listener name="My Servlet Context Listener" i18n-name-key="my-servlet-context-listener.name" key="my-servlet-context-listener" class="upgraded.servlet.listener.MyServletContextListener"> 
+    <description key="my-servlet-context-listener.description">The My Servlet Context Listener Plugin</description> 
+  </servlet-context-listener>
+</atlassian-plugin>
