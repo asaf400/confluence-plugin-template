@@ -4,8 +4,8 @@ which is the only version Atlassian 'supports' with their sdk.
 
 These are the steps required in order to build this Atlassian Plugin:
 
-* Install JDK11 [https://adoptium.net/temurin/releases/](OpenJDK - Adoptium temurin)
-* Install atlassian-sdk from [https://developer.atlassian.com/server/framework/atlassian-sdk/downloads/](here)
+* Install JDK11 [OpenJDK - Adoptium temurin](https://adoptium.net/temurin/releases/)
+* Install atlassian-sdk from [here](https://developer.atlassian.com/server/framework/atlassian-sdk/downloads/)
 * Install Apache Maven v3.6.3, the bundled version in the atlas-sdk (v3.5.4) doesn't support JDK11 and or the dependencies
 * Set ATLAS_MVN Environment variable to the installed binary of Maven v3.6.3
 * Navigate to the installation directory of the atlas-sdk - atlassian-plugin-sdk-8.2.7\apache-maven-3.5.4\conf\
