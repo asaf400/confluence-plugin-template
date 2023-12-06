@@ -11,9 +11,8 @@ import com.atlassian.confluence.security.SpacePermissionManager;
 import com.atlassian.confluence.user.ConfluenceAuthenticator;
 import com.atlassian.confluence.user.AuthenticatedUserThreadLocal;
 import com.atlassian.confluence.user.ConfluenceUser;
-import com.atlassian.activeobjects.external.ActiveObjects;
+//import com.atlassian.activeobjects.external.ActiveObjects;
 import com.atlassian.confluence.user.ConfluenceUserManager;
-import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +35,8 @@ import java.util.Optional;
 @Named
 public class MyServletFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(MyServletFilter.class);
+    public static final String SPACE_KEY = "spaceKey";
+    public static final String TITLE = "title";
     @ConfluenceImport
     private final PageManager pageManager;
 
@@ -54,8 +55,8 @@ public class MyServletFilter implements Filter {
     @ConfluenceImport
     private final SpacePermissionManager spacePermissionManager;
 
-    @ComponentImport
-    final ActiveObjects activeObjects;
+//    @ComponentImport
+//    final ActiveObjects activeObjects;
 
 //    @ConfluenceImport
 //    private final ConfluenceAuthenticator confluenceAuthenticator;
@@ -70,7 +71,7 @@ public class MyServletFilter implements Filter {
     }
 
     @Inject
-    public MyServletFilter(PageManager pageManager, SpaceManager spaceManager, UserAccessor userAccessor, LabelManager labelManager, PermissionManager permissionManager, SpacePermissionManager spacePermissionManager, ActiveObjects activeObjects) {
+    public MyServletFilter(PageManager pageManager, SpaceManager spaceManager, UserAccessor userAccessor, LabelManager labelManager, PermissionManager permissionManager, SpacePermissionManager spacePermissionManager) {
 //        ConfluenceAuthenticator confluenceAuthenticator, ConfluenceUser confluenceUser, ConfluenceUserManager confluenceUserManager
         this.pageManager = pageManager;
         this.spaceManager = spaceManager;
@@ -95,67 +96,52 @@ public class MyServletFilter implements Filter {
         return null;  // Not found
     }
 
+    private void redirect(ServletResponse response) {
+        response.reset();
+        if (response instanceof HttpServletResponse) {
+            HttpServletResponse resp = (HttpServletResponse) response;
+            resp.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
+            resp.setHeader("Location", "http://localhost:1990/confluence/");
+        }
+    }
+
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         //do some custom handling here
         System.out.println("FOOBAR4");
-        HttpServletResponse resp = (HttpServletResponse) response;
-        resp.reset();
-        resp.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
-        resp.setHeader("Location", "http://localhost:1990/confluence/");
+
+        if (!(request instanceof HttpServletRequestWrapper)) {
+            redirect(response);
+            return;
+        }
 
         // Extract information from the request URL
         HttpServletRequestWrapper wrapped_request = (HttpServletRequestWrapper) request;
 
         String requestURI = wrapped_request.getRequestURI();
         String contextPath = wrapped_request.getContextPath();
-        javax.servlet.ServletContext context = wrapped_request.getSession().getServletContext();
-        ConfluenceUser confluenceUser = AuthenticatedUserThreadLocal.get();
-
+        // javax.servlet.ServletContext context = wrapped_request.getSession().getServletContext();
+         ConfluenceUser confluenceUser = AuthenticatedUserThreadLocal.get();
 
         Space currentSpace;
-        List<Page> pages = new ArrayList<Page>();
-        if (wrapped_request.getParameterMap().containsKey("spaceKey") &&
-                wrapped_request.getParameter("spaceKey") != null &&
-                !wrapped_request.getParameter("spaceKey").trim().isEmpty()) {
-            currentSpace = this.spaceManager.getSpace(wrapped_request.getParameter("spaceKey"));
+        List<Page> pages = new ArrayList<>();
+        if (wrapped_request.getParameterMap().containsKey(SPACE_KEY) &&
+                wrapped_request.getParameter(SPACE_KEY) != null &&
+                !wrapped_request.getParameter(SPACE_KEY).trim().isEmpty()) {
+            currentSpace = this.spaceManager.getSpace(wrapped_request.getParameter(SPACE_KEY));
             pages = pageManager.getPages(currentSpace,true);
         }
 
         // Check if the request is for a Confluence page - Conf 8.X
         Page currentPage;
 //        Optional<Page> currentPage;
-        if (wrapped_request.getParameterMap().containsKey("title") &&
-                wrapped_request.getParameter("title") != null &&
-                !wrapped_request.getParameter("title").trim().isEmpty()) {
+        if (wrapped_request.getParameterMap().containsKey(TITLE) &&
+                wrapped_request.getParameter(TITLE) != null &&
+                !wrapped_request.getParameter(TITLE).trim().isEmpty()) {
 
 //            currentPage = pages.stream().filter(page -> page.getTitle().equals(wrapped_request.getParameter("title"))).findFirst();
             currentPage = findPageByTitle(pages, wrapped_request.getParameter("title"));
         }
 
-        // Check if the request is for a Confluence page - Conf 6.X
-        if (requestURI.startsWith(contextPath + "/pages/")) {
-            // Extract space key and page title from the request URL
-            String pageIdParam = wrapped_request.getParameter("pageId");
-
-            if (pageIdParam != null) {
-                long pageId = Long.parseLong(pageIdParam);
-
-                // Retrieve Page and Space objects using ComponentAccessor
-//                PageManager pageManager = ComponentAccessor.getComponent(PageManager.class);
-//                SpaceManager spaceManager = ComponentAccessor.getComponent(SpaceManager.class);
-
-                // Retrieve Page object using injected PageManager
-//                Page page = pageManager.getPage(pageId);
-
-//                if (page != null) {
-//                    System.out.println("Request is for a Confluence page:");
-//                    System.out.println("Page Title: " + page.getTitle());
-//                    System.out.println("Space Key: " + page.getSpaceKey());
-//                }
-            } else {
-                System.out.println("Either PageManager is not available or missing pageId. Unable to retrieve detailed page information.");
-            }
-        }
         //continue the request
         chain.doFilter(request, response);
     }

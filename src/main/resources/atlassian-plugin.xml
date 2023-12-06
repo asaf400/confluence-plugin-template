@@ -18,8 +18,9 @@
     <resource type="download" name="images/" location="/images"/>  
     <context>upgradedartifact</context> 
   </web-resource>  
-  <servlet-filter name="My Servlet Filter" i18n-name-key="my-servlet-filter.name" key="my-servlet-filter" class="upgraded.servlet.filter.MyServletFilter" location="before-decoration" weight="100">
+  <servlet-filter name="My Servlet Filter" i18n-name-key="my-servlet-filter.name" key="my-servlet-filter" class="upgraded.servlet.filter.MyServletFilter" location="before-decoration" weight="100"> 
     <description key="my-servlet-filter.description">The My Servlet Filter Plugin</description>  
+    <!-- yariv: We can (and should) apply the filter for all the routes. We can exclude specific pages in the servlet code itself.   -->  
     <url-pattern>/display/*</url-pattern>  
     <url-pattern>/pages/*</url-pattern>  
     <url-pattern>/foobar</url-pattern>  
