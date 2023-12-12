@@ -1,0 +1,24 @@
+<html>
+<head>
+    <meta name="decorator" content="atl.admin" />
+<!--    $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")-->
+    $webResourceManager.requireResource("upgraded.upgradedartifact:upgradedartifact-resources")
+    <title>Admin Configuration</title>
+    <style>
+        input, label {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<form id="admin">
+    <div>
+        <label for="mapping">Space Groups Mapping</label>
+        <textarea name="mapping" id="mapping" cols="60" rows="20"></textarea>
+    </div>
+    <div>
+        <input type="submit" value="Save"/>
+    </div>
+</form>
+</body>
+</html>
