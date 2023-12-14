@@ -37,23 +37,22 @@ import static com.atlassian.confluence.user.AuthenticatedUserThreadLocal.getUser
 
 @Named
 public class MyServletFilter implements Filter {
+    public static final String SPACE_KEY = "spaceKey";
+    private static final Logger log = LoggerFactory.getLogger(MyServletFilter.class);
     @ComponentImport
     private final PluginSettingsFactory pluginSettingsFactory;
-
-    private static final Logger log = LoggerFactory.getLogger(MyServletFilter.class);
-    public static final String SPACE_KEY = "spaceKey";
-
     @ConfluenceImport
     private final UserAccessor userAccessor;
-
-    public void init(FilterConfig filterConfig) throws ServletException {
-    }
 
     @Inject
     public MyServletFilter(UserAccessor userAccessor, PluginSettingsFactory pluginSettingsFactory) {
         this.userAccessor = userAccessor;
         this.pluginSettingsFactory = pluginSettingsFactory;
     }
+
+    public void init(FilterConfig filterConfig) throws ServletException {
+    }
+
     public void destroy() {
     }
 
@@ -78,11 +77,12 @@ public class MyServletFilter implements Filter {
 
     /**
      * We fetch the list of the user's groups, as seen by Confluence.
-     *
+     * <p>
      * We assume that Confluence fetches the groups using LDAP, and expect
      * the mapping values above to be such groups.
      * Note - we do not query LDAP ourselves. We rely on the fact only admins
      * can s
+     *
      * @param username
      * @return
      */
@@ -90,11 +90,11 @@ public class MyServletFilter implements Filter {
         return userAccessor.getGroupNamesForUserName(username);
     }
 
-    private PluginSettings initilizeSettings(){
+    private PluginSettings initilizeSettings() {
         PluginSettings pluginSettings = pluginSettingsFactory.createGlobalSettings();
         Object myString = pluginSettings.get("JSON_SETTINGS");
-        if (myString == null || ((String) myString).equals("")){
-        pluginSettings.put("JSON_SETTINGS","[]");
+        if (myString == null || ((String) myString).equals("")) {
+            pluginSettings.put("JSON_SETTINGS", "[]");
         }
         return pluginSettings;
     }
@@ -109,7 +109,8 @@ public class MyServletFilter implements Filter {
         String spacesFilter = (String) pluginSettings.get("JSON_SETTINGS");
         ObjectMapper objectMapper = new ObjectMapper();
 
-        List<SpaceConfig> spaceConfigList = objectMapper.readValue(spacesFilter, new TypeReference<List<SpaceConfig>>() {});
+        List<SpaceConfig> spaceConfigList = objectMapper.readValue(spacesFilter, new TypeReference<List<SpaceConfig>>() {
+        });
 
         Map<String, List<String>> spaceToGroups = new HashMap<String, List<String>>();
         {
@@ -117,7 +118,7 @@ public class MyServletFilter implements Filter {
             spaceToGroups.put("aaa", Arrays.asList("group1", "confluence-users"));
         }
 
-        for ( SpaceConfig o : spaceConfigList ) {
+        for (SpaceConfig o : spaceConfigList) {
             spaceToGroups.put(o.spaceName, o.allowedGroups);
         }
 
@@ -135,7 +136,7 @@ public class MyServletFilter implements Filter {
 
         String space = getSpaceKey(wrapped_request);
         space = space == null ? null : space.toLowerCase();
-        if (space == null){
+        if (space == null) {
             chain.doFilter(request, response);
             return;
         }
