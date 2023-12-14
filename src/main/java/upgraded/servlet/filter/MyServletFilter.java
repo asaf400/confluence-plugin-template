@@ -9,6 +9,11 @@ import com.atlassian.confluence.security.PermissionManager;
 import com.atlassian.confluence.security.SpacePermissionManager;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import upgraded.config.ConfigResource.SpaceConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+
 
 import com.sun.source.util.Plugin;
 import org.slf4j.Logger;
@@ -20,6 +25,7 @@ import javax.inject.Named;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.Response;
 
 import com.atlassian.plugin.spring.scanner.annotation.imports.*;
 
@@ -31,12 +37,6 @@ import static com.atlassian.confluence.user.AuthenticatedUserThreadLocal.getUser
 
 @Named
 public class MyServletFilter implements Filter {
-    Map<String, List<String>> spaceToGroups = new HashMap<String, List<String>>();
-    {
-        spaceToGroups.put("asdf", Arrays.asList("group1", "confluence-users"));
-        spaceToGroups.put("aaa", Arrays.asList("group1", "confluence-users"));
-    }
-
     @ComponentImport
     private final PluginSettingsFactory pluginSettingsFactory;
 
@@ -92,9 +92,9 @@ public class MyServletFilter implements Filter {
 
     private PluginSettings initilizeSettings(){
         PluginSettings pluginSettings = pluginSettingsFactory.createGlobalSettings();
-        Object myString = pluginSettings.get("string");
+        Object myString = pluginSettings.get("JSON_SETTINGS");
         if (myString == null || ((String) myString).equals("")){
-        pluginSettings.put("string","helloWorld");
+        pluginSettings.put("JSON_SETTINGS","[]");
         }
         return pluginSettings;
     }
@@ -106,6 +106,20 @@ public class MyServletFilter implements Filter {
         }
 
         PluginSettings pluginSettings = initilizeSettings();
+        String spacesFilter = (String) pluginSettings.get("JSON_SETTINGS");
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        List<SpaceConfig> spaceConfigList = objectMapper.readValue(spacesFilter, new TypeReference<List<SpaceConfig>>() {});
+
+        Map<String, List<String>> spaceToGroups = new HashMap<String, List<String>>();
+        {
+            spaceToGroups.put("asdf", Arrays.asList("group1", "confluence-users"));
+            spaceToGroups.put("aaa", Arrays.asList("group1", "confluence-users"));
+        }
+
+        for ( SpaceConfig o : spaceConfigList ) {
+            spaceToGroups.put(o.spaceName, o.allowedGroups);
+        }
 
         System.out.println("Examining request...");
         if (!(request instanceof HttpServletRequestWrapper)) {
@@ -113,7 +127,6 @@ public class MyServletFilter implements Filter {
             redirect(response);
             return;
         }
-
 
         // Extract information from the request URL
         HttpServletRequestWrapper wrapped_request = (HttpServletRequestWrapper) request;

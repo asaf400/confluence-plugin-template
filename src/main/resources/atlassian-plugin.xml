@@ -25,9 +25,8 @@
     <!-- yariv: We can (and should) apply the filter for all the routes. We can exclude specific pages in the servlet code itself.   -->  
     <url-pattern>/display/*</url-pattern>  
     <url-pattern>/pages/*</url-pattern>  
-    <url-pattern>/foobar</url-pattern>  
-    <url-pattern>/*</url-pattern>  
-    <dispatcher>REQUEST</dispatcher>  
+    <url-pattern>/plugins/servlet/upgraded/test</url-pattern>
+    <dispatcher>REQUEST</dispatcher>
     <dispatcher>FORWARD</dispatcher>  
     <dispatcher>INCLUDE</dispatcher>  
     <dispatcher>ERROR</dispatcher> 

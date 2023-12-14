@@ -22,6 +22,10 @@
                         contentType: "application/json",
                         data: $("#mapping").val(),
                         processData: false
+                    }).done(function(){
+                        alert("✅ Changes were successfully saved!");
+                    }).fail(function(jqXHR, textStatus){
+                        alert(`❌ Invalid JSON, changes were not applied. (${textStatus}: ${jqXHR.status})`);
                     });
                 }
 
