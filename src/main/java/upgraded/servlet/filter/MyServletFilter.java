@@ -1,15 +1,12 @@
 package upgraded.servlet.filter;
 
-import com.atlassian.confluence.pages.Page;
-import com.atlassian.confluence.pages.PageManager;
-import com.atlassian.confluence.spaces.SpaceManager;
 import com.atlassian.confluence.user.*;
 import com.atlassian.confluence.labels.LabelManager;
-import com.atlassian.confluence.security.PermissionManager;
-import com.atlassian.confluence.security.SpacePermissionManager;
+import com.atlassian.confluence.labels.Label;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.context.annotation.Bean;
 import upgraded.config.ConfigResource.SpaceConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -44,10 +41,15 @@ public class MyServletFilter implements Filter {
     @ConfluenceImport
     private final UserAccessor userAccessor;
 
+
+    @ConfluenceImport
+    private final LabelManager labelManager;
+
     @Inject
-    public MyServletFilter(UserAccessor userAccessor, PluginSettingsFactory pluginSettingsFactory) {
+    public MyServletFilter(UserAccessor userAccessor, PluginSettingsFactory pluginSettingsFactory, LabelManager labelManager) {
         this.userAccessor = userAccessor;
         this.pluginSettingsFactory = pluginSettingsFactory;
+        this.labelManager = labelManager;
     }
 
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -112,14 +114,9 @@ public class MyServletFilter implements Filter {
         List<SpaceConfig> spaceConfigList = objectMapper.readValue(spacesFilter, new TypeReference<List<SpaceConfig>>() {
         });
 
-        Map<String, List<String>> spaceToGroups = new HashMap<String, List<String>>();
-        {
-            spaceToGroups.put("asdf", Arrays.asList("group1", "confluence-users"));
-            spaceToGroups.put("aaa", Arrays.asList("group1", "confluence-users"));
-        }
-
+        Map<String, List<String>> labelToGroups = new HashMap<String, List<String>>();
         for (SpaceConfig o : spaceConfigList) {
-            spaceToGroups.put(o.spaceName, o.allowedGroups);
+            labelToGroups.put(o.label, o.allowedGroups);
         }
 
         System.out.println("Examining request...");
@@ -141,21 +138,30 @@ public class MyServletFilter implements Filter {
             return;
         }
 
-        List<String> spaceGroups = spaceToGroups.get(space);
-        if (spaceGroups == null || spaceGroups.isEmpty()) {
-            redirect(response);
-            return;
-        }
+        // Get all categories for current requested space
+        List<Label> labels = labelManager.getTeamLabelsForSpace(space);
 
-        Set<String> intersection = confluenceGroups.stream()
-                .distinct()
-                .filter(spaceGroups::contains)
-                .collect(Collectors.toSet());
+        // Foreach label in current requested space labels
+        //   see if the label is in the plugin's listed restricted labels list
+        Collection<String> labelNames = labels.stream().map(Label::getName).collect(Collectors.toList());
+        labelToGroups.keySet().retainAll(labelNames);
 
-        boolean allowed = !intersection.isEmpty();
-        if (!allowed) {
-            redirect(response);
-            return;
+//        List<String> spaceGroups = labelToGroups.get(space);
+//        if (labelToGroups.isEmpty()) {
+//            chain.doFilter(request, response);
+//            return;
+//        }
+
+        for (String l : labelToGroups.keySet()) {
+            Set<String> intersection = confluenceGroups.stream()
+                    .distinct()
+                    .filter(labelToGroups.get(l)::contains)
+                    .collect(Collectors.toSet());
+
+            if (intersection.isEmpty()) {
+                redirect(response);
+                return;
+            }
         }
 
         //continue the request
