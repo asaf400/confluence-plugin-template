@@ -12,7 +12,7 @@
             dataType: "json"
         }).done(function(content) { // when the configuration is returned...
             // ...populate the form.
-            $("#mapping").val(JSON.stringify(content));
+            $("#mapping").val(JSON.stringify(content, null, 2));
         });
 
         function updateConfig() {
