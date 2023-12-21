@@ -1,31 +1,25 @@
 package upgraded.servlet.filter;
 
-import com.atlassian.confluence.user.*;
-import com.atlassian.confluence.labels.LabelManager;
 import com.atlassian.confluence.labels.Label;
+import com.atlassian.confluence.labels.LabelManager;
+import com.atlassian.confluence.user.UserAccessor;
+import com.atlassian.confluence.setup.settings.GlobalSettingsManager;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ConfluenceImport;
 import com.atlassian.sal.api.pluginsettings.PluginSettings;
 import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.context.annotation.Bean;
-import upgraded.config.ConfigResource.SpaceConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-
-
-import com.sun.source.util.Plugin;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
+import upgraded.config.ConfigResource.LabelConfig;
 
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.Response;
-
-import com.atlassian.plugin.spring.scanner.annotation.imports.*;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,147 +28,127 @@ import static com.atlassian.confluence.user.AuthenticatedUserThreadLocal.getUser
 
 @Named
 public class MyServletFilter implements Filter {
-    public static final String SPACE_KEY = "spaceKey";
+    public static final String REQUEST_PARAMETER_SPACE_KEY = "spaceKey";
+    public static final String CONFIGURATION_JSON_SETTINGS_KEY = "JSON_SETTINGS";
+    public static final String BLOCKED_REQUEST_REDIRECT_PATH = "";
+    public static final String FAILSAFE_ENV_VAR_NAME = "DISABLE_SECURITY_PLUGIN";
     private static final Logger log = LoggerFactory.getLogger(MyServletFilter.class);
-    @ComponentImport
-    private final PluginSettingsFactory pluginSettingsFactory;
+
     @ConfluenceImport
     private final UserAccessor userAccessor;
-
 
     @ConfluenceImport
     private final LabelManager labelManager;
 
+    @ComponentImport
+    private final PluginSettingsFactory pluginSettingsFactory;
+
+    @ComponentImport
+    private final GlobalSettingsManager globalSettingsManager;
+
     @Inject
-    public MyServletFilter(UserAccessor userAccessor, PluginSettingsFactory pluginSettingsFactory, LabelManager labelManager) {
+    public MyServletFilter(UserAccessor userAccessor, LabelManager labelManager,
+                           PluginSettingsFactory pluginSettingsFactory, GlobalSettingsManager globalSettingsManager) {
         this.userAccessor = userAccessor;
-        this.pluginSettingsFactory = pluginSettingsFactory;
         this.labelManager = labelManager;
+        this.pluginSettingsFactory = pluginSettingsFactory;
+        this.globalSettingsManager = globalSettingsManager;
     }
 
-    public void init(FilterConfig filterConfig) throws ServletException {
+    public void init(FilterConfig filterConfig) {
     }
 
     public void destroy() {
     }
 
-    private void redirect(ServletResponse response) {
-        response.reset();
+    private void blockRequest(ServletResponse response) {
         log.info("Blocking request");
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse resp = (HttpServletResponse) response;
-            resp.setStatus(HttpServletResponse.SC_MOVED_PERMANENTLY);
-            // TODO: add a message for the user
-            resp.setHeader("Location", "http://localhost:1990/confluence/");
-        }
+
+        response.reset();
+        HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+        httpServletResponse.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+        String baseUrl = globalSettingsManager.getGlobalSettings().getBaseUrl();
+        httpServletResponse.setHeader("Location", baseUrl + BLOCKED_REQUEST_REDIRECT_PATH);
     }
 
-    private String getSpaceKey(HttpServletRequestWrapper request) {
-        if (!request.getParameterMap().containsKey(SPACE_KEY)) {
-            // This happens quite often, we need a way to tell if this is a content request, otherwise we have to block it
+    private String getCurrentSpace(HttpServletRequestWrapper request) {
+        if (!request.getParameterMap().containsKey(REQUEST_PARAMETER_SPACE_KEY)) {
             return null;
         }
-        return request.getParameter(SPACE_KEY);
+        return request.getParameter(REQUEST_PARAMETER_SPACE_KEY);
     }
 
     /**
-     * We fetch the list of the user's groups, as seen by Confluence.
-     * <p>
+     * We fetch the list of groups in which the user is a member of, as seen by Confluence.
      * We assume that Confluence fetches the groups using LDAP, and expect
-     * the mapping values above to be such groups.
-     * Note - we do not query LDAP ourselves. We rely on the fact only admins
-     * can s
-     *
-     * @param username
-     * @return
+     * the configuration of permitted groups to be of such groups.
+     * Note: We do not query LDAP ourselves and rely on the fact that only admins create groups and that
+     * the groups seen by Confluence are therefore trustworthy.
      */
-    private List<String> getGroups(String username) {
+    private List<String> getUserGroups() {
+        String username = getUsername();
         return userAccessor.getGroupNamesForUserName(username);
     }
 
-    private PluginSettings initilizeSettings() {
+    private List<LabelConfig> getPluginSettings() {
         PluginSettings pluginSettings = pluginSettingsFactory.createGlobalSettings();
-        Object myString = pluginSettings.get("JSON_SETTINGS");
-        if (myString == null || ((String) myString).equals("")) {
-            pluginSettings.put("JSON_SETTINGS", "[]");
+        Object jsonSettings = pluginSettings.get(CONFIGURATION_JSON_SETTINGS_KEY);
+        List<LabelConfig> settings = new ArrayList<>();
+        if (jsonSettings != null && !((String) jsonSettings).isEmpty()) {
+            try {
+                settings = new ObjectMapper().readValue((String)jsonSettings, new TypeReference<>() {});
+            } catch (JsonProcessingException e) {
+                log.error("Could not parse plugin configuration");
+            }
         }
-        return pluginSettings;
+
+        return settings;
     }
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        if (System.getenv("DISABLE_SECURITY_PLUGIN") != null) {
+        // Due to the sensitivity of the plugin and its potential to lead to unavailability, including of admin users,
+        // the FAILSAFE_ENV_VAR_NAME environment variable is used as a failsafe mechanism that if set permits
+        // all requests
+        if (System.getenv(FAILSAFE_ENV_VAR_NAME) != null) {
             chain.doFilter(request, response);
             return;
         }
 
-        PluginSettings pluginSettings = initilizeSettings();
-        String spacesFilter = (String) pluginSettings.get("JSON_SETTINGS");
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        List<SpaceConfig> spaceConfigList = objectMapper.readValue(spacesFilter, new TypeReference<List<SpaceConfig>>() {
-        });
-
-        Map<String, List<String>> labelToGroups = new HashMap<String, List<String>>();
-        for (SpaceConfig o : spaceConfigList) {
-            labelToGroups.put(o.label, o.allowedGroups);
-        }
-
-        System.out.println("Examining request...");
-        if (!(request instanceof HttpServletRequestWrapper)) {
-            // TODO understand which requests get here
-            redirect(response);
-            return;
-        }
-
-        // Extract information from the request URL
-        HttpServletRequestWrapper wrapped_request = (HttpServletRequestWrapper) request;
-        String username = getUsername();
-        List<String> confluenceGroups = getGroups(username);
-
-        String space = getSpaceKey(wrapped_request);
+        // Permit non-space request
+        String space = getCurrentSpace((HttpServletRequestWrapper) request);
         space = space == null ? null : space.toLowerCase();
         if (space == null) {
             chain.doFilter(request, response);
             return;
         }
 
-        // Get all categories for current requested space
-        List<Label> labels = labelManager.getTeamLabelsForSpace(space);
+        // Load plugin configuration
+        List<LabelConfig> pluginSettings = getPluginSettings();
+        Map<String, List<String>> labelsToPermittedGroups = new HashMap<>();
+        for (LabelConfig labelConfig : pluginSettings) {
+            labelsToPermittedGroups.put(labelConfig.label, labelConfig.allowedGroups);
+        }
 
-        // Foreach label in current requested space labels
-        //   see if the label is in the plugin's listed restricted labels list
-        Collection<String> labelNames = labels.stream().map(Label::getName).collect(Collectors.toList());
-        labelToGroups.keySet().retainAll(labelNames);
+        // Filter label-level configuration to relevant labels
+        List<Label> spaceLabels = labelManager.getTeamLabelsForSpace(space);
+        Collection<String> spaceLabelNames = spaceLabels.stream().map(Label::getName).collect(Collectors.toList());
+        labelsToPermittedGroups.keySet().retainAll(spaceLabelNames);
 
-//        List<String> spaceGroups = labelToGroups.get(space);
-//        if (labelToGroups.isEmpty()) {
-//            chain.doFilter(request, response);
-//            return;
-//        }
-
-        for (String l : labelToGroups.keySet()) {
-            Set<String> intersection = confluenceGroups.stream()
+        // Ensure membership of the user in at least one group of each of the relevant space labels
+        List<String> userGroups = getUserGroups();
+        for (String label : labelsToPermittedGroups.keySet()) {
+            Set<String> intersection = userGroups.stream()
                     .distinct()
-                    .filter(labelToGroups.get(l)::contains)
+                    .filter(labelsToPermittedGroups.get(label)::contains)
                     .collect(Collectors.toSet());
 
             if (intersection.isEmpty()) {
-                redirect(response);
+                blockRequest(response);
                 return;
             }
         }
 
-        //continue the request
+        // Continue the request
         chain.doFilter(request, response);
     }
-
-
-    /* public void foo(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-
-        String requestURI = wrapped_request.getRequestURI();
-        String contextPath = wrapped_request.getContextPath();
-        // javax.servlet.ServletContext context = wrapped_request.getSession().getServletContext();
-        ConfluenceUser confluenceUser = AuthenticatedUserThreadLocal.get();
-
-    }*/
 }
