@@ -1,25 +1,23 @@
 <html>
-<head>
-    <meta name="decorator" content="atl.admin"/>
-    <!--    $webResourceManager.requireResource("com.atlassian.auiplugin:ajs")-->
-    $webResourceManager.requireResource("upgraded.upgradedartifact:upgradedartifact-resources")
-    <title>Admin Configuration</title>
-    <style>
-        input, label {
-            display: block;
-        }
-
-    </style>
-</head>
-<body>
-<form id="admin">
-    <div>
-        <label for="mapping">Space Groups Mapping</label>
-        <textarea name="mapping" id="mapping" cols="80" rows="20" spellcheck="false"></textarea>
-    </div>
-    <div>
-        <input type="submit" value="Save"/>
-    </div>
-</form>
-</body>
+    <head>
+        <meta name="decorator" content="atl.admin"/>
+        $webResourceManager.requireResource("com.groupie.groupie:groupie-resources")
+        <title>Groupie Plugin Configuration</title>
+        <style>
+            input, label {
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <form id="admin">
+            <div>
+                <label for="mapping">Label-Groups Mapping</label>
+                <textarea name="mapping" id="mapping" cols="80" rows="20" spellcheck="false"></textarea>
+            </div>
+            <div>
+                <input type="submit" value="Save" />
+            </div>
+        </form>
+    </body>
 </html>

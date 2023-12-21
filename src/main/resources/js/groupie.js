@@ -1,17 +1,14 @@
-(function ($) { // this closure helps us keep our variables to ourselves.
-// This pattern is known as an "iife" - immediately invoked function expression
+(function ($) {
+    var url = AJS.contextPath() + "/rest/groupie/1.0/";
 
-    // form the URL
-    var url = AJS.contextPath() + "/rest/upgraded/1.0/";
-
-    // wait for the DOM (i.e., document "skeleton") to load.
+    // wait for the DOM
     $(function() {
         // request the config information from the server
         $.ajax({
             url: url,
             dataType: "json"
-        }).done(function(content) { // when the configuration is returned...
-            // ...populate the form.
+        }).done(function(content) {
+            // populate the form
             $("#mapping").val(JSON.stringify(content, null, 2));
         });
 

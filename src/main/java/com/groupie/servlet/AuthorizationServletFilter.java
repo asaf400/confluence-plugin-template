@@ -1,4 +1,4 @@
-package upgraded.servlet.filter;
+package com.groupie.servlet;
 
 import com.atlassian.confluence.labels.Label;
 import com.atlassian.confluence.labels.LabelManager;
@@ -11,9 +11,10 @@ import com.atlassian.sal.api.pluginsettings.PluginSettingsFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.groupie.config.ConfigModels;
+import com.groupie.rest.ConfigRestHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import upgraded.config.ConfigResource.LabelConfig;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -27,12 +28,11 @@ import java.util.stream.Collectors;
 import static com.atlassian.confluence.user.AuthenticatedUserThreadLocal.getUsername;
 
 @Named
-public class MyServletFilter implements Filter {
+public class AuthorizationServletFilter implements Filter {
     public static final String REQUEST_PARAMETER_SPACE_KEY = "spaceKey";
-    public static final String CONFIGURATION_JSON_SETTINGS_KEY = "JSON_SETTINGS";
     public static final String BLOCKED_REQUEST_REDIRECT_PATH = "";
     public static final String FAILSAFE_ENV_VAR_NAME = "DISABLE_SECURITY_PLUGIN";
-    private static final Logger log = LoggerFactory.getLogger(MyServletFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(AuthorizationServletFilter.class);
 
     @ConfluenceImport
     private final UserAccessor userAccessor;
@@ -47,8 +47,8 @@ public class MyServletFilter implements Filter {
     private final GlobalSettingsManager globalSettingsManager;
 
     @Inject
-    public MyServletFilter(UserAccessor userAccessor, LabelManager labelManager,
-                           PluginSettingsFactory pluginSettingsFactory, GlobalSettingsManager globalSettingsManager) {
+    public AuthorizationServletFilter(UserAccessor userAccessor, LabelManager labelManager,
+                                      PluginSettingsFactory pluginSettingsFactory, GlobalSettingsManager globalSettingsManager) {
         this.userAccessor = userAccessor;
         this.labelManager = labelManager;
         this.pluginSettingsFactory = pluginSettingsFactory;
@@ -90,10 +90,10 @@ public class MyServletFilter implements Filter {
         return userAccessor.getGroupNamesForUserName(username);
     }
 
-    private List<LabelConfig> getPluginSettings() {
+    private List<ConfigModels.LabelConfig> getPluginSettings() {
         PluginSettings pluginSettings = pluginSettingsFactory.createGlobalSettings();
-        Object jsonSettings = pluginSettings.get(CONFIGURATION_JSON_SETTINGS_KEY);
-        List<LabelConfig> settings = new ArrayList<>();
+        Object jsonSettings = pluginSettings.get(ConfigRestHandler.CONFIGURATION_JSON_SETTINGS_KEY);
+        List<ConfigModels.LabelConfig> settings = new ArrayList<>();
         if (jsonSettings != null && !((String) jsonSettings).isEmpty()) {
             try {
                 settings = new ObjectMapper().readValue((String)jsonSettings, new TypeReference<>() {});
@@ -123,9 +123,9 @@ public class MyServletFilter implements Filter {
         }
 
         // Load plugin configuration
-        List<LabelConfig> pluginSettings = getPluginSettings();
+        List<ConfigModels.LabelConfig> pluginSettings = getPluginSettings();
         Map<String, List<String>> labelsToPermittedGroups = new HashMap<>();
-        for (LabelConfig labelConfig : pluginSettings) {
+        for (ConfigModels.LabelConfig labelConfig : pluginSettings) {
             labelsToPermittedGroups.put(labelConfig.label, labelConfig.allowedGroups);
         }
 

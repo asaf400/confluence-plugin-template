@@ -1,19 +1,11 @@
-package ut.upgraded.servlet.filter;
+package com.groupie.servlet.filter;
 
-import com.atlassian.confluence.pages.PageManager;
-import com.atlassian.confluence.spaces.SpaceManager;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import upgraded.servlet.filter.MyServletFilter;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
