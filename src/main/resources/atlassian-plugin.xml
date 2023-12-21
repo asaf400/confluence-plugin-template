@@ -8,6 +8,7 @@
     <param name="plugin-icon">images/pluginIcon.png</param>  
     <param name="plugin-logo">images/pluginLogo.png</param>  
     <param name="configure.url">/plugins/servlet/groupie/admin</param>
+    <param name="arbitrary">Am Israel Chai</param>
   </plugin-info>
   <!-- add our i18n resource -->
   <resource type="i18n" name="i18n" location="groupie"/>
