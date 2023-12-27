@@ -25,4 +25,22 @@ public class ConfigModels {
         @JsonProperty(required = true)
         public List<String> allowedGroups;
     }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.FIELD)
+    @Validated
+    public static final class LabelOverview {
+        @XmlElement
+        @JsonProperty(required = true)
+        public String space;
+
+        @XmlElement
+        @JsonProperty(required = true)
+        public List<String> labels;
+
+        public LabelOverview(String space, List<String> labels){
+            this.space = space;
+            this.labels = labels;
+        }
+    }
 }

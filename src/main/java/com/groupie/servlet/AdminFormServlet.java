@@ -1,6 +1,7 @@
 package com.groupie.servlet;
 
 import java.net.URI;
+
 import com.atlassian.sal.api.auth.LoginUriProvider;
 import com.atlassian.sal.api.user.UserKey;
 import com.atlassian.sal.api.user.UserManager;
@@ -9,7 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-
 import com.atlassian.sal.api.user.UserProfile;
 import com.atlassian.templaterenderer.TemplateRenderer;
 import javax.inject.Inject;
@@ -26,7 +26,8 @@ public class AdminFormServlet extends HttpServlet{
     private final TemplateRenderer templateRenderer;
 
     @Inject
-    public AdminFormServlet(UserManager userManager, LoginUriProvider loginUriProvider, TemplateRenderer templateRenderer) {
+    public AdminFormServlet(UserManager userManager, LoginUriProvider loginUriProvider,
+                            TemplateRenderer templateRenderer) {
         this.userManager = userManager;
         this.loginUriProvider = loginUriProvider;
         this.templateRenderer = templateRenderer;

@@ -1,7 +1,7 @@
 <html>
     <head>
         <meta name="decorator" content="atl.admin"/>
-        $webResourceManager.requireResource("com.groupie.groupie:groupie-resources")
+            $webResourceManager.requireResourcesForContext("groupie")
         <title>Groupie Plugin Configuration</title>
         <style>
             input, label {
@@ -12,11 +12,20 @@
     <body>
         <form id="admin">
             <div>
-                <label for="mapping">Label-Groups Mapping</label>
+                <label for="mapping">Label-Groups Mapping Configuration</label>
                 <textarea name="mapping" id="mapping" cols="80" rows="20" spellcheck="false"></textarea>
             </div>
             <div>
                 <input type="submit" value="Save" />
+            </div>
+            <br/><br/>
+            <div>
+                <label for="filtered_overview">Spaces which are currently using a security label</label>
+                <textarea name="filtered_overview" id="filtered_overview" cols="80" rows="20" spellcheck="false" disabled=""></textarea>
+            </div>
+            <div>
+                <label for="unused_labels">Spaces with arbitrary labels</label>
+                <textarea name="unused_labels" id="unused_labels" cols="80" rows="20" spellcheck="false" disabled=""></textarea>
             </div>
         </form>
     </body>

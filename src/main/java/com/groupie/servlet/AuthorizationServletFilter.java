@@ -129,6 +129,9 @@ public class AuthorizationServletFilter implements Filter {
             labelsToPermittedGroups.put(labelConfig.label, labelConfig.allowedGroups);
         }
 
+        // TODO: what if 'labelConfig.allowedGroups' is an empty list, OR
+        // TODO: what if a a user exists in one label, but the other label is an empty list.
+
         // Filter label-level configuration to relevant labels
         List<Label> spaceLabels = labelManager.getTeamLabelsForSpace(space);
         Collection<String> spaceLabelNames = spaceLabels.stream().map(Label::getName).collect(Collectors.toList());
