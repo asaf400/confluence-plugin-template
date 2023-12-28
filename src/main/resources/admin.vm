@@ -20,12 +20,12 @@
             </div>
             <br/><br/>
             <div>
-                <label for="filtered_overview">Spaces which are currently using a security label</label>
-                <textarea name="filtered_overview" id="filtered_overview" cols="80" rows="20" spellcheck="false" disabled=""></textarea>
+                <label for="security-labels-overview">Spaces with security labels</label>
+                <textarea name="security-labels-overview" id="security-labels-overview" cols="80" rows="20" spellcheck="false" disabled></textarea>
             </div>
             <div>
-                <label for="unused_labels">Spaces with arbitrary labels</label>
-                <textarea name="unused_labels" id="unused_labels" cols="80" rows="20" spellcheck="false" disabled=""></textarea>
+                <label for="standard-labels-overview">Spaces with standard (non-security) labels</label>
+                <textarea name="standard-labels-overview" id="standard-labels-overview" cols="80" rows="20" spellcheck="false" disabled></textarea>
             </div>
         </form>
     </body>

@@ -22,7 +22,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.io.IOException;
 import java.util.*;
 import java.lang.Iterable;
 import java.util.stream.Collectors;
@@ -34,8 +33,6 @@ import java.util.stream.Stream;
 @Path("/overview")
 @Named
 public class OverviewRestHandler {
-    public static final String CONFIGURATION_JSON_SETTINGS_KEY = "JSON_SETTINGS";
-
     @ComponentImport
     private final UserManager userManager;
 
@@ -79,6 +76,7 @@ public class OverviewRestHandler {
             return Response.status(Status.UNAUTHORIZED).build();
         }
 
+        // Get all spaces
         Collection<String> activeSpaces = spaceManager.getAllSpaceKeys(SpaceStatus.CURRENT);
         Collection<String> archivedSpaces = spaceManager.getAllSpaceKeys(SpaceStatus.ARCHIVED);
 
@@ -86,9 +84,8 @@ public class OverviewRestHandler {
                 activeSpaces.stream(),
                 archivedSpaces.stream());
 
+        // Map spaces to labels
         Map<String, List<Label>> allSpacesToLabels = new HashMap<>();
-
-        // Populate allSpacesToLabels with labels for each space
         for (String space : (Iterable<String>) allSpaces::iterator) {
             List<Label> labels = labelManager.getTeamLabelsForSpace(space);
             if (!labels.isEmpty()) {
@@ -96,44 +93,39 @@ public class OverviewRestHandler {
             }
         }
 
+        // Map spaces of both security and standard (non-security) labels
         List<ConfigModels.LabelConfig> pluginSettings = getPluginSettings();
+        List<ConfigModels.LabelOverview> securityLabelsOverview = new ArrayList<>();
+        List<ConfigModels.LabelOverview> standardLabelsOverview = new ArrayList<>();
 
-        // Create a map to store the filteredSpacesAndLabels
-        List<ConfigModels.LabelOverview> filteredSpacesAndLabels = new ArrayList<>();
-
-        // Create a map to store the filteredSpacesAndLabels
-        List<ConfigModels.LabelOverview> availableSpacesAndLabels = new ArrayList<>();
-
-        // Iterate over spaces
         for (String space : allSpacesToLabels.keySet()) {
-            // Get labels for the current space
             List<Label> spaceLabels = allSpacesToLabels.get(space);
 
-            // Filter plugin settings based on the intersection of label names
-            List<String> filteredSettings = pluginSettings.stream()
+            // Filter space labels to security ones
+            List<String> securityLabels = pluginSettings.stream()
                     .filter(config -> spaceLabels.stream().anyMatch(label -> label.getName().equals(config.label)))
                     .map(config -> config.label)
                     .collect(Collectors.toList());
 
-            // Filter plugin settings based on the lack of intersection of label names
-            List<String> unusedLabels = spaceLabels.stream()
+            // Filter space labels to standard (non-security) ones
+            List<String> standardLabels = spaceLabels.stream()
                     .filter(label -> pluginSettings.stream().noneMatch(config -> label.getName().equals(config.label)))
                     .map(Label::getName)
                     .collect(Collectors.toList());
 
             // Add the filtered settings to the filteredSpacesAndLabels map
-            if (!filteredSettings.isEmpty()) {
-                filteredSpacesAndLabels.add(new ConfigModels.LabelOverview(space, filteredSettings));
+            if (!securityLabels.isEmpty()) {
+                securityLabelsOverview.add(new ConfigModels.LabelOverview(space, securityLabels));
             }
 
-            if (!unusedLabels.isEmpty()) {
-                availableSpacesAndLabels.add(new ConfigModels.LabelOverview(space, unusedLabels));
+            if (!standardLabels.isEmpty()) {
+                standardLabelsOverview.add(new ConfigModels.LabelOverview(space, standardLabels));
             }
         }
 
         Map<String, List<ConfigModels.LabelOverview>> combinedResponseJson = new HashMap<>(){{
-            put("filteredSpacesAndLabels", filteredSpacesAndLabels);
-            put("availableSpacesAndLabels", availableSpacesAndLabels);
+            put("securityLabelsOverview", securityLabelsOverview);
+            put("standardLabelsOverview", standardLabelsOverview);
         }};
 
         return Response.ok(combinedResponseJson).build();
@@ -147,14 +139,6 @@ public class OverviewRestHandler {
 
         UserKey userKey = userProfile.getUserKey();
         if (!userManager.isSystemAdmin(userKey)) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private boolean isLabelConfigValid(ConfigModels.LabelConfig labelConfig) {
-        if (labelConfig.label == null || labelConfig.allowedGroups == null) {
             return false;
         }
 
