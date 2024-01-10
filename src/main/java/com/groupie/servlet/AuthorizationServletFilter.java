@@ -2,6 +2,7 @@ package com.groupie.servlet;
 
 import com.atlassian.confluence.labels.Label;
 import com.atlassian.confluence.labels.LabelManager;
+import com.atlassian.confluence.user.AuthenticatedUserThreadLocal;
 import com.atlassian.confluence.user.UserAccessor;
 import com.atlassian.confluence.setup.settings.GlobalSettingsManager;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
@@ -24,8 +25,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.atlassian.confluence.user.AuthenticatedUserThreadLocal.getUsername;
 
 @Named
 public class AuthorizationServletFilter implements Filter {
@@ -75,7 +74,8 @@ public class AuthorizationServletFilter implements Filter {
         if (!request.getParameterMap().containsKey(REQUEST_PARAMETER_SPACE_KEY)) {
             return null;
         }
-        return request.getParameter(REQUEST_PARAMETER_SPACE_KEY);
+
+        return (String)request.getParameterMap().get(REQUEST_PARAMETER_SPACE_KEY);
     }
 
     /**
@@ -86,7 +86,7 @@ public class AuthorizationServletFilter implements Filter {
      * the groups seen by Confluence are therefore trustworthy.
      */
     private List<String> getUserGroups() {
-        String username = getUsername();
+        String username = AuthenticatedUserThreadLocal.getUsername();
         return userAccessor.getGroupNamesForUserName(username);
     }
 
@@ -128,9 +128,6 @@ public class AuthorizationServletFilter implements Filter {
         for (ConfigModels.LabelConfig labelConfig : pluginSettings) {
             labelsToPermittedGroups.put(labelConfig.label, labelConfig.allowedGroups);
         }
-
-        // TODO: what if 'labelConfig.allowedGroups' is an empty list, OR
-        // TODO: what if a a user exists in one label, but the other label is an empty list.
 
         // Filter label-level configuration to relevant labels
         List<Label> spaceLabels = labelManager.getTeamLabelsForSpace(space);
